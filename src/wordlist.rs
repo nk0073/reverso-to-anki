@@ -5,11 +5,14 @@ use std::{
     path::Path,
 };
 
+use genanki_rs::{Deck, Field, Model, Note, Template};
 use scraper::{Html, Selector};
 use serde::{Deserialize, Serialize};
 
 use crate::utils::{self, get_path};
+
 const WORD_LIST_FILE_NAME: &str = "wordlist.json";
+const OUT_ANKI_FILE_NAME: &str = "definitions.apkg";
 
 #[derive(Debug, Deserialize, Serialize, Clone, Hash, PartialEq, Eq)]
 pub struct Word {
@@ -48,26 +51,26 @@ pub fn scrape_node(node: &String) -> Vec<Word> {
             .map(|n| n.text().collect::<String>().trim().to_string())
             .unwrap_or_default();
 
-        let pos_raw = item
+        let part_of_speech = item
             .select(&pos_selector)
             .next()
             .map(|n| {
                 n.text()
                     .collect::<String>()
                     .trim()
-                    .trim_end_matches('.')
+                    // .trim_end_matches('.')
                     .to_string()
             })
             .unwrap_or_default();
 
-        let part_of_speech = match pos_raw.as_str() {
-            "n" => "noun",
-            "adj" => "adjective",
-            "v" => "verb",
-            "adv" => "adverb",
-            _ => "unknown", // Others usually don't show up
-        }
-        .to_string();
+        // let part_of_speech = match pos_raw.as_str() {
+        //     "n" => "noun",
+        //     "adj" => "adjective",
+        //     "v" => "verb",
+        //     "adv" => "adverb",
+        //     _ => "unknown", // Others usually don't show up
+        // }
+        // .to_string();
 
         results.push(Word {
             word,
@@ -96,8 +99,8 @@ fn read_list() -> Option<Vec<Word>> {
         return None;
     }
 
-    let parsed = serde_json::from_str::<Vec<Word>>(&file_out)
-        .expect("Failed to deserialize {path}");
+    let parsed =
+        serde_json::from_str::<Vec<Word>>(&file_out).expect("Failed to deserialize {path}");
 
     Some(parsed)
 }
@@ -138,4 +141,42 @@ pub fn update_list(words: &Vec<Word>) {
     }
 
     write_list(&final_list);
+    println!("Updated the wordlist.json");
+    create_anki_deck(&final_list);
+    println!("Updated the {OUT_ANKI_FILE_NAME}");
+}
+
+fn create_anki_deck(words: &Vec<Word>) {
+    let mut deck = Deck::new(737373737, "En Definitions", "Definitions of English words");
+    let custom_css = ".card {\n font-family: arial;\n font-size: 20px;\n text-align: center;\n color: black;\n}\n";
+
+    for word in words {
+        let model = Model::new(
+            737373737373,
+            "model",
+            vec![
+                Field::new("Word"),
+                Field::new("Definition"),
+                Field::new("Example"),
+            ],
+            vec![
+                Template::new("Card")
+                    .qfmt("{{Word}}")
+                    .afmt(r#"{{FrontSide}}<hr id="definition">{{Definition}}<br/>{{Example}}"#),
+            ],
+        ).css(custom_css);
+
+        let note = Note::new(
+            model,
+            vec![
+                &format!("{} ({})", word.word, word.part_of_speech)[..],
+                &word.definition[..],
+                &word.example_sentence[..],
+            ],
+        ).unwrap();
+
+        deck.add_note(note);
+    }
+
+    deck.write_to_file(&get_path(OUT_ANKI_FILE_NAME)).unwrap();
 }

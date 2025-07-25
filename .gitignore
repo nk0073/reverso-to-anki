@@ -2,3 +2,4 @@
 Cargo.lock
 wordlist.json
 cookies.json
+*.apkg
