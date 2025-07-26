@@ -4,12 +4,14 @@ use tokio::time::{Duration, sleep};
 mod cookies;
 mod wordlist;
 mod utils;
+mod config;
 
 #[tokio::main]
 async fn main() -> WebDriverResult<()> {
+    let cfg = config::get_config();
     let mut caps = DesiredCapabilities::firefox();
     caps.unset_headless().unwrap();
-    let http_driver = "http://localhost:4444";
+    let http_driver = &format!("http://localhost:{}", cfg.port)[..];
     let driver = match WebDriver::new(http_driver, caps).await {
         Ok(val) => val,
         Err(err) => {
@@ -17,12 +19,12 @@ async fn main() -> WebDriverResult<()> {
         }
     };
 
-    login(&driver).await?;
+    login(&driver, &cfg).await?;
     let option_node = get_words_node(&driver).await?;
     driver.quit().await?;
     if let Some(node) = option_node {
         let words = wordlist::scrape_node(&node);
-        wordlist::update_list(&words);
+        wordlist::update_list(&words, &cfg);
     } else {
         println!("You don't have any words saved! Nothing is changed.")
     }
@@ -30,9 +32,9 @@ async fn main() -> WebDriverResult<()> {
     Ok(())
 }
 
-async fn login(driver: &WebDriver) -> WebDriverResult<()> {
+async fn login(driver: &WebDriver, cfg: &config::Config) -> WebDriverResult<()> {
     let (mut cookies_file, cookies_file_created) = cookies::get_cookies_file();
-    driver.get("https://www.reverso.net/favorites/en").await?;
+    driver.get(format!("https://www.reverso.net/favorites/{}", &cfg.language[..])).await?;
 
     let cookies_loaded_succssfully = cookies::load_cookies(&driver, &mut cookies_file).await;
     driver.refresh().await?;

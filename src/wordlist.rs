@@ -9,10 +9,9 @@ use genanki_rs::{Deck, Field, Model, Note, Template};
 use scraper::{Html, Selector};
 use serde::{Deserialize, Serialize};
 
-use crate::utils::{self, get_path};
+use crate::{config, utils::{self, get_path}};
 
 const WORD_LIST_FILE_NAME: &str = "wordlist.json";
-const OUT_ANKI_FILE_NAME: &str = "definitions.apkg";
 
 #[derive(Debug, Deserialize, Serialize, Clone, Hash, PartialEq, Eq)]
 pub struct Word {
@@ -58,19 +57,9 @@ pub fn scrape_node(node: &String) -> Vec<Word> {
                 n.text()
                     .collect::<String>()
                     .trim()
-                    // .trim_end_matches('.')
                     .to_string()
             })
             .unwrap_or_default();
-
-        // let part_of_speech = match pos_raw.as_str() {
-        //     "n" => "noun",
-        //     "adj" => "adjective",
-        //     "v" => "verb",
-        //     "adv" => "adverb",
-        //     _ => "unknown", // Others usually don't show up
-        // }
-        // .to_string();
 
         results.push(Word {
             word,
@@ -117,7 +106,7 @@ fn write_list(words: &Vec<Word>) {
     println!("Wrote to {}", WORD_LIST_FILE_NAME);
 }
 
-pub fn update_list(words: &Vec<Word>) {
+pub fn update_list(words: &Vec<Word>, cfg: &config::Config) {
     let mut final_list: Vec<Word>;
     let option_file_words = read_list();
     if let Some(file_words) = option_file_words {
@@ -142,18 +131,18 @@ pub fn update_list(words: &Vec<Word>) {
 
     write_list(&final_list);
     println!("Updated the wordlist.json");
-    create_anki_deck(&final_list);
-    println!("Updated the {OUT_ANKI_FILE_NAME}");
+    create_anki_deck(&final_list, cfg);
+    println!("Updated the {}", cfg.anki_file_name);
 }
 
-fn create_anki_deck(words: &Vec<Word>) {
-    let mut deck = Deck::new(737373737, "En Definitions", "Definitions of English words");
+fn create_anki_deck(words: &Vec<Word>, cfg: &config::Config) {
+    let mut deck = Deck::new(cfg.deck.id, &cfg.deck.name[..], &cfg.deck.description[..]);
     let custom_css = ".card {\n font-family: arial;\n font-size: 20px;\n text-align: center;\n color: black;\n}\n";
 
     for word in words {
         let model = Model::new(
-            737373737373,
-            "model",
+            cfg.model.id,
+            &cfg.model.name[..],
             vec![
                 Field::new("Word"),
                 Field::new("Definition"),
@@ -162,7 +151,7 @@ fn create_anki_deck(words: &Vec<Word>) {
             vec![
                 Template::new("Card")
                     .qfmt("{{Word}}")
-                    .afmt(r#"{{FrontSide}}<hr id="definition">{{Definition}}<br/>{{Example}}"#),
+                    .afmt(r#"{{FrontSide}}<hr id="definition">{{Definition}}<br/><br/>{{Example}}"#),
             ],
         ).css(custom_css);
 
@@ -178,5 +167,5 @@ fn create_anki_deck(words: &Vec<Word>) {
         deck.add_note(note);
     }
 
-    deck.write_to_file(&get_path(OUT_ANKI_FILE_NAME)).unwrap();
+    deck.write_to_file(&get_path(&cfg.anki_file_name)).unwrap();
 }
