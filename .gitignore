@@ -1,4 +1,5 @@
 /target
+/my-deck
 Cargo.lock
 wordlist.json
 cookies.json
