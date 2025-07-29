@@ -3,4 +3,5 @@
 Cargo.lock
 wordlist.json
 cookies.json
+cfg.toml
 *.apkg

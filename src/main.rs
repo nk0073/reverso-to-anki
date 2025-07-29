@@ -1,11 +1,10 @@
 // 
 //
 //  TODO
-//  - FIX A BUG for some reason cfg.toml is always empty
 //  - log to latest.log alongside with printing cus windows normies will want ta launch with .exe
 //  instead of using console like normal people
+//  - add pronounciations, though fetch them from somewhere else because reverso's voices are horrible
 //  - maybe make it possible to provide custom css with a .css file
-//  - add voices, though fetch them from somewhere else because reverso's voices are horrible
 //
 //
 

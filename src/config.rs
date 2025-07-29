@@ -9,8 +9,7 @@ use serde::Deserialize;
 use crate::utils::get_path;
 
 const CONFIG_FILE_NAME: &str = "cfg.toml";
-const DEFAULT_CONFIG: &str = r#"
-language = 'en'
+const DEFAULT_CONFIG: &str = r#"language = 'en'
 anki_file_name = 'definitions.apkg'
 port = 4444
 
@@ -48,16 +47,13 @@ pub struct DeckConfig {
 
 pub fn get_config() -> Config {
     let path = get_path(CONFIG_FILE_NAME);
-    let mut file_created = false;
     let mut file = OpenOptions::new()
         .write(true)
-        .truncate(true)
         .read(true)
         .open(&path)
         .or_else(|err| {
             if err.kind() == std::io::ErrorKind::NotFound {
                 println!("Config file not found. Generating a default {CONFIG_FILE_NAME}");
-                file_created = true;
                 let mut file = OpenOptions::new()
                     .create(true)
                     .write(true)
@@ -73,10 +69,8 @@ pub fn get_config() -> Config {
         })
         .expect("Couldn't open or create the config file. Panicking...");
 
-    let mut text = DEFAULT_CONFIG.to_string();
-    if !file_created {
-        file.read_to_string(&mut text).unwrap();
-    }
+    let mut text = String::new();
+    file.read_to_string(&mut text).unwrap();
 
     toml::from_str::<Config>(&text[..]).unwrap()
 }
