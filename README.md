@@ -15,9 +15,8 @@ I may have went into too much detail in this explanation, so you can just go to 
 
 The app will create auxiliary files so you should put it in a separate folder.
 
-<a id="bloat_consumers">
-If you're on [windows](https://ibb.co/V0pLyYQY), I advise you to run the program from cmd/powershell because as of now, all the output including errors are printed to the console. To do that, open cmd/powerhsell, run `cd directory/with/the/executable` and run `.\reverso-to-anki.exe`
-</a>
+<a id="bloat_consumers" href="https://ibb.co/V0pLyYQY" target="_blank">
+If you're on windows</a>, I advise you to run the program from cmd/powershell because as of now, all the output including errors are printed to the console. To do that, open cmd/powerhsell, run `cd directory/with/the/executable` and run `.\reverso-to-anki.exe`
 
 <a id="fields"></a>The app will initially create a `cfg.toml` and stop so you can configure it as you like. Some of these fields may be important. Here is a breakdown:
 
