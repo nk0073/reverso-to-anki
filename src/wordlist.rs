@@ -6,10 +6,14 @@ use std::{
 };
 
 use genanki_rs::{Deck, Field, Model, Note, Template};
+use rand::seq::SliceRandom;
 use scraper::{Html, Selector};
 use serde::{Deserialize, Serialize};
 
-use crate::{config, utils::{self, get_path}};
+use crate::{
+    config,
+    utils::{self, get_path},
+};
 
 const WORD_LIST_FILE_NAME: &str = "wordlist.json";
 
@@ -53,12 +57,7 @@ pub fn scrape_node(node: &String) -> Vec<Word> {
         let part_of_speech = item
             .select(&pos_selector)
             .next()
-            .map(|n| {
-                n.text()
-                    .collect::<String>()
-                    .trim()
-                    .to_string()
-            })
+            .map(|n| n.text().collect::<String>().trim().to_string())
             .unwrap_or_default();
 
         results.push(Word {
@@ -131,6 +130,8 @@ pub fn update_list(words: &Vec<Word>, cfg: &config::Config) {
 
     write_list(&final_list);
     println!("Updated the wordlist.json");
+
+    final_list.shuffle(&mut rand::rng());
     create_anki_deck(&final_list, cfg);
     println!("Updated the {}", cfg.anki_file_name);
 }
@@ -140,20 +141,20 @@ fn create_anki_deck(words: &Vec<Word>, cfg: &config::Config) {
     let custom_css = ".card {\n font-family: arial;\n font-size: 20px;\n text-align: center;\n color: black;\n}\n";
 
     for word in words {
-        let model = Model::new(
-            cfg.model.id,
-            &cfg.model.name[..],
-            vec![
-                Field::new("Word"),
-                Field::new("Definition"),
-                Field::new("Example"),
-            ],
-            vec![
-                Template::new("Card")
-                    .qfmt("{{Word}}")
-                    .afmt(r#"{{FrontSide}}<hr id="definition">{{Definition}}<br/><br/>{{Example}}"#),
-            ],
-        ).css(custom_css);
+        let model =
+            Model::new(
+                cfg.model.id,
+                &cfg.model.name[..],
+                vec![
+                    Field::new("Word"),
+                    Field::new("Definition"),
+                    Field::new("Example"),
+                ],
+                vec![Template::new("Card").qfmt("{{Word}}").afmt(
+                    r#"{{FrontSide}}<hr id="definition">{{Definition}}<br/><br/>{{Example}}"#,
+                )],
+            )
+            .css(custom_css);
 
         let note = Note::new(
             model,
@@ -162,7 +163,8 @@ fn create_anki_deck(words: &Vec<Word>, cfg: &config::Config) {
                 &word.definition[..],
                 &word.example_sentence[..],
             ],
-        ).unwrap();
+        )
+        .unwrap();
 
         deck.add_note(note);
     }
