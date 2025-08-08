@@ -10,8 +10,10 @@
 //
 
 use std::io::Write;
+use std::os::unix::fs::PermissionsExt;
 use std::process::Child;
 use std::process::Command;
+use std::fs::Permissions;
 
 use tempfile::NamedTempFile;
 use thirtyfour::prelude::*;
@@ -30,7 +32,7 @@ async fn main() -> WebDriverResult<()> {
     let option_node = get_words_node(&driver).await?;
 
     driver.quit().await?;
-    geckodriver.kill().unwrap();
+    geckodriver.kill().ok();
 
     if let Some(node) = option_node {
         let words = wordlist::scrape_node(&node);
@@ -51,7 +53,7 @@ async fn init_driver(cfg: &config::Config) -> WebDriverResult<(Child, WebDriver)
     #[cfg(unix)]
     {
         let mut perms: Permissions = temp_file.as_file().metadata()?.permissions();
-        perms.set_mode(0o755); // +x
+        perms.set_mode(0o755);
         temp_file.as_file().set_permissions(perms)?;
     }
 
@@ -65,7 +67,7 @@ async fn init_driver(cfg: &config::Config) -> WebDriverResult<(Child, WebDriver)
     let mut caps = DesiredCapabilities::firefox();
     caps.unset_headless().unwrap();
     let http_driver = &format!("http://localhost:{}", cfg.port)[..];
-    let driver = WebDriver::new(http_driver, caps).await.unwrap();
+    let driver = WebDriver::new(http_driver, caps).await.unwrap(); // error here
 
     Ok((geckodriver, driver))
 }

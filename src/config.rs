@@ -11,7 +11,7 @@ use crate::utils::get_path;
 const CONFIG_FILE_NAME: &str = "cfg.toml";
 const DEFAULT_CONFIG: &str = r#"language = 'en'
 anki_file_name = 'definitions.apkg'
-port = 4444
+port = 8181
 
 [model]
 id = 737373737373
