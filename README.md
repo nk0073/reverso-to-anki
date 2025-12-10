@@ -8,7 +8,16 @@ If there's no build for your platform, install cargo, and in the root directory 
 cargo build --release
 ```
 
-the executable will be in ./target/release/reverso-to-anki(.exe)
+The executable will be in ./target/release/reverso-to-anki(.exe)
+
+
+
+The build uses ***PRECOMPILED GECKO BINARIES*** to integrate a geckodriver into the binary so you don't have to have 2 executables 
+for this app. 
+
+If you don't trust me (oooooww), go to https://github.com/mozilla/geckodriver/releases download an appropriate exectuable, put it into 
+geckodrivers/ directory and rename it to match your system (overwrite another executable)
+
 
 ## Usage
 I may have went into too much detail in this explanation, so you can just go to [TLDR](#tldr) if you just want to get things done. Feel free to read this section if you encounter any problems before making an issue / a PR.

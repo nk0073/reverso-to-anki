@@ -11,8 +11,12 @@ use crate::utils;
 
 // Returns the file and the bool which is true if the file was created, false if it existed before
 const COOKIES_FILE_NAME: &str = "cookies.json";
+pub fn get_path_cookies_file() -> String {
+    utils::get_path(COOKIES_FILE_NAME)
+}
+
 pub fn get_cookies_file() -> (File, bool) {
-    let path = utils::get_path(COOKIES_FILE_NAME);
+    let path = get_path_cookies_file();
     if !Path::new(&path).exists() {
         println!("Creating cookies file");
         let file = File::create(&path).unwrap();
@@ -44,6 +48,10 @@ pub async fn load_cookies(driver: &WebDriver, cookie_file: &mut File) -> bool {
     };
 
     for cookie in cookies {
+        if !cookie.secure.unwrap_or(false) {
+            continue;
+        }
+
         match driver.add_cookie(cookie).await {
             Ok(_) => {}
             Err(_) => {
@@ -63,8 +71,8 @@ pub async fn save_cookies(driver: &WebDriver, cookie_file: &mut File) {
         Ok(_) => {
             println!("Wrote cookies to the file");
         }
-        Err(_) => {
-            eprintln!("WARNING Failed to write the cookie file");
+        Err(err) => {
+            eprintln!("WARNING Failed to write the cookie file. \nError: {err}\n\n");
         }
     }
 }

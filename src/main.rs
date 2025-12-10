@@ -1,4 +1,4 @@
-// 
+//
 //
 //  TODO
 //  - add pronounciations, though fetch them from somewhere else because reverso's voices are horrible
@@ -9,11 +9,11 @@
 //
 //
 
+use std::fs::Permissions;
 use std::io::Write;
 use std::os::unix::fs::PermissionsExt;
 use std::process::Child;
 use std::process::Command;
-use std::fs::Permissions;
 
 use tempfile::NamedTempFile;
 use thirtyfour::prelude::*;
@@ -27,12 +27,11 @@ mod wordlist;
 #[tokio::main]
 async fn main() -> WebDriverResult<()> {
     let cfg = config::get_config();
-    let (mut geckodriver, driver) = init_driver(&cfg).await?;
+    let (geckodriver, driver) = init_driver(&cfg).await?;
     login(&driver, &cfg).await?;
     let option_node = get_words_node(&driver).await?;
 
     driver.quit().await?;
-    geckodriver.kill().ok();
 
     if let Some(node) = option_node {
         let words = wordlist::scrape_node(&node);
@@ -41,10 +40,27 @@ async fn main() -> WebDriverResult<()> {
         println!("You don't have any words saved! Nothing is changed.")
     }
 
+    let _keep_alive = geckodriver;
     Ok(())
 }
 
-async fn init_driver(cfg: &config::Config) -> WebDriverResult<(Child, WebDriver)> {
+// Kills the geckodriver after the process stops
+// Prevents it from lingering and not allowing this program to start if it has exited on unwrap
+struct KillChild {
+    child: Child,
+}
+
+impl Drop for KillChild {
+    fn drop(&mut self) {
+        let pid = self.child.id();
+        println!("Killing geckodriver with pid of {pid}");
+
+        let _ = self.child.kill();
+        let _ = self.child.wait();
+    }
+}
+
+async fn init_driver(cfg: &config::Config) -> WebDriverResult<(KillChild, WebDriver)> {
     let driver_bytes = select_geckodriver();
 
     let mut temp_file = NamedTempFile::new()?;
@@ -58,16 +74,20 @@ async fn init_driver(cfg: &config::Config) -> WebDriverResult<(Child, WebDriver)
     }
 
     let path = temp_file.into_temp_path();
-    let geckodriver = Command::new(&path)
+    let _geckodriver = Command::new(&path)
         .arg("--port")
         .arg(cfg.port.to_string())
         .spawn()
         .unwrap();
 
+    let geckodriver = KillChild {
+        child: _geckodriver,
+    };
+
     let mut caps = DesiredCapabilities::firefox();
     caps.unset_headless().unwrap();
     let http_driver = &format!("http://localhost:{}", cfg.port)[..];
-    let driver = WebDriver::new(http_driver, caps).await.unwrap(); // error here
+    let driver = WebDriver::new(http_driver, caps.clone()).await.unwrap(); // error here
 
     Ok((geckodriver, driver))
 }
@@ -87,7 +107,7 @@ async fn login(driver: &WebDriver, cfg: &config::Config) -> WebDriverResult<()> 
         println!(
             "WARNING Cookies file was found, but wasn't loaded successfully. Erasing the cookies file..."
         );
-        cookies_file.set_len(0)?;
+        std::fs::remove_file(cookies::get_path_cookies_file()).unwrap();
     }
 
     match driver
@@ -194,4 +214,3 @@ pub fn select_geckodriver() -> &'static [u8] {
     all(target_os = "macos", target_arch = "aarch64")
 )))]
 compile_error!("Unsupported platform: no geckodriver embedded for this OS/arch.");
-
