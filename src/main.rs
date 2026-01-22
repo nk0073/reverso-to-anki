@@ -14,6 +14,7 @@ use std::io::Write;
 use std::os::unix::fs::PermissionsExt;
 use std::process::Child;
 use std::process::Command;
+use std::process::Stdio;
 
 use tempfile::NamedTempFile;
 use thirtyfour::prelude::*;
@@ -77,6 +78,8 @@ async fn init_driver(cfg: &config::Config) -> WebDriverResult<(KillChild, WebDri
     let _geckodriver = Command::new(&path)
         .arg("--port")
         .arg(cfg.port.to_string())
+        .stderr(Stdio::null())
+        .stdout(Stdio::null())
         .spawn()
         .unwrap();
 
