@@ -16,6 +16,7 @@ use std::process::Child;
 use std::process::Command;
 use std::process::Stdio;
 
+use rand::rand_core::impls::next_u64_via_u32;
 use tempfile::NamedTempFile;
 use thirtyfour::prelude::*;
 use tokio::time::{Duration, sleep};
@@ -62,6 +63,12 @@ impl Drop for KillChild {
 }
 
 async fn init_driver(cfg: &config::Config) -> WebDriverResult<(KillChild, WebDriver)> {
+    let headless = if let Some(arg) = std::env::args().collect::<Vec<String>>().get(1) {
+        arg.eq("--headless")
+    } else {
+        false
+    };
+
     let driver_bytes = select_geckodriver();
 
     let mut temp_file = NamedTempFile::new()?;
@@ -88,7 +95,12 @@ async fn init_driver(cfg: &config::Config) -> WebDriverResult<(KillChild, WebDri
     };
 
     let mut caps = DesiredCapabilities::firefox();
-    caps.unset_headless().unwrap();
+    if headless {
+        caps.set_headless().unwrap();
+    } else {
+        caps.unset_headless().unwrap();
+    }
+
     let http_driver = &format!("http://localhost:{}", cfg.port)[..];
     let driver = WebDriver::new(http_driver, caps.clone()).await.unwrap(); // error here
 
